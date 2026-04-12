@@ -274,7 +274,7 @@
         // 当前半径
         this.radius = 0;
         // 相位 (用于克拉尼图案)
-        this.phase = random(TWO_PI);
+        this.phase = Math.random() * Math.PI * 2;
         // 衰减相位
         this.dampingPhase = 0;
         // 活跃状态
@@ -283,8 +283,8 @@
         this.opacity = 1.0;
         
         // 克拉尼波纹
-        this.waveCount = floor(random(4, 8));
-        this.wavePhase = random(1000);
+        this.waveCount = Math.floor(Math.random() * 4 + 4);
+        this.wavePhase = Math.random() * 1000;
       }
       
       update() {
@@ -363,8 +363,8 @@
     // ===== Step 3: 克拉尼粒子系统 =====
     class ChladniParticle {
       constructor() {
-        this.x = random(width);
-        this.y = random(height);
+        this.x = Math.random() * width;
+        this.y = Math.random() * height;
         this.vx = 0;
         this.vy = 0;
         this.baseX = this.x;
