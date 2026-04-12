@@ -108,9 +108,9 @@
     }
   </style>
   
-  <!-- Mapbox GL JS -->
-  <script src="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js"></script>
-  <link href="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.css" rel="stylesheet" />
+  <!-- Leaflet (无 token 要求) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet">
@@ -161,10 +161,8 @@
     
     // ===== 配置 =====
     const CONFIG = {
-      // Mapbox Token - 需要替换为你的token
-      mapboxToken: 'YOUR_MAPBOX_TOKEN_HERE',
       // 中心点 - 武汉
-      center: [114.3055, 30.5928],
+      center: [30.5928, 114.3055],  // Leaflet: [lat, lon]
       zoom: 11,
       // 时间轴设置
       startDate: new Date('2022-01-01'),
@@ -212,46 +210,44 @@
     // p5.js Canvas
     let canvas;
     
-    // ===== Step 1: Mapbox 初始化 =====
+    // ===== Step 1: Leaflet 初始化 (无需 token) =====
     function initMap() {
-      mapboxgl.accessToken = CONFIG.mapboxToken;
-      
-      map = new mapboxgl.Map({
-        container: 'map',
-        style: {
-          version: 8,
-          sources: {
-            'carto-dark': {
-              type: 'raster',
-              tiles: [
-                'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
-              ],
-              tileSize: 256,
-              attribution: '© CARTO © OpenStreetMap'
-            }
-          },
-          layers: [{
-            id: 'carto-dark-layer',
-            type: 'raster',
-            source: 'carto-dark',
-            minzoom: 0,
-            maxzoom: 20
-          }]
-        },
+      // 创建 Leaflet 地图（暗色 CARTO 底图）
+      map = L.map('map', {
         center: CONFIG.center,
         zoom: CONFIG.zoom,
-        maxZoom: 16,
         minZoom: 9,
-        attributionControl: false
+        maxZoom: 16,
+        zoomControl: false,
+        attributionControl: false,
+        dragging: true,
+        scrollWheelZoom: false
       });
       
-      // 隐藏 attribution
-      map.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '© CARTO © OpenStreetMap',
+        maxZoom: 19
+      }).addTo(map);
+      
+      // 添加缩放控件（小尺寸）
+      L.control.zoom({ position: 'bottomright' }).addTo(map);
+      
+      // attribution
+      L.control.attribution({ position: 'bottomright', prefix: '' }).addTo(map);
+      
+      // Leaflet 兼容 map.project 接口
+      map.project = function(coords) {
+        const point = this.latLngToContainerPoint(coords);
+        return point;
+      };
+      
+      // 地图移动时触发重绘
+      map.on('move', () => { if (window.requestRender) window.requestRender(true); });
     }
     
     // ===== Step 1: 经纬度转像素坐标 =====
     function lonLatToPixel(lon, lat) {
-      const point = map.project([lon, lat]);
+      const point = map.latLngToContainerPoint([lat, lon]);
       return { x: point.x, y: point.y };
     }
     
