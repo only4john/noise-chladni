@@ -235,12 +235,6 @@
       // attribution
       L.control.attribution({ position: 'bottomright', prefix: '' }).addTo(map);
       
-      // Leaflet 兼容 map.project 接口
-      map.project = function(coords) {
-        const point = this.latLngToContainerPoint(coords);
-        return point;
-      };
-      
       // 地图移动时触发重绘
       map.on('move', () => { if (window.requestRender) window.requestRender(true); });
     }
@@ -358,9 +352,9 @@
     
     // ===== Step 3: 克拉尼粒子系统 =====
     class ChladniParticle {
-      constructor() {
-        this.x = Math.random() * width;
-        this.y = Math.random() * height;
+      constructor(w, h) {
+        this.x = Math.random() * w;
+        this.y = Math.random() * h;
         this.vx = 0;
         this.vy = 0;
         this.baseX = this.x;
@@ -403,7 +397,7 @@
         
         // 初始化粒子
         for (let i = 0; i < 2000; i++) {
-          particles.push(new ChladniParticle());
+          particles.push(new ChladniParticle(p.width, p.height));
         }
         
         // 加载真实数据或演示数据
@@ -416,7 +410,7 @@
       p.windowResized = function() {
         p.resizeCanvas(window.innerWidth, window.innerHeight);
         if (map) {
-          map.resize();
+          map.invalidateSize();
         }
       };
       
