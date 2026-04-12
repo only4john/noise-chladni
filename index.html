@@ -289,7 +289,7 @@
         this.dampingPhase += 0.15;
         
         // 透明度衰减
-        this.opacity = exp(-this.dampingPhase * 0.3);
+        this.opacity = Math.exp(-this.dampingPhase * 0.3);
         
         // 克拉尼波纹相位
         this.wavePhase += 0.05;
@@ -310,7 +310,7 @@
         // 多层克拉尼波纹
         for (let i = 0; i < this.waveCount; i++) {
           const waveR = this.radius * (0.3 + i * 0.15);
-          const waveAmp = sin(this.wavePhase + this.wavePhase * 0.5 + i) * 15 * this.opacity;
+          const waveAmp = Math.sin(this.wavePhase + this.wavePhase * 0.5 + i) * 15 * this.opacity;
           
           // 重墨质感 - 外发光
           const glowAlpha = this.opacity * 80;
@@ -340,10 +340,10 @@
         p.beginShape();
         for (let a = 0; a < TWO_PI; a += 0.1) {
           // 克拉尼节点线 - 根据频率产生不同的波节
-          const displacement = sin(a * (mode + 2) * 2 + this.phase) * 
+          const displacement = Math.sin(a * (mode + 2) * 2 + this.phase) * 
                               cos(a * (mode + 1) + this.phase * 0.7);
-          const px = cos(a) * (r + displacement * 10);
-          const py = sin(a) * (r + displacement * 10);
+          const px = Math.cos(a) * (r + displacement * 10);
+          const py = Math.sin(a) * (r + displacement * 10);
           p.vertex(px, py);
         }
         p.endShape(CLOSE);
@@ -427,17 +427,17 @@
             
             const dx = pulse.x - particle.x;
             const dy = pulse.y - particle.y;
-            const dist = sqrt(dx * dx + dy * dy);
+            const dist = p.sqrt(dx * dx + dy * dy);
             
             if (dist < pulse.radius && dist > 10) {
               // 指数衰减力场
-              const strength = exp(-dist / pulse.radius) * pulse.opacity * 0.5;
+              const strength = Math.exp(-dist / pulse.radius) * pulse.opacity * 0.5;
               const angle = atan2(dy, dx);
               
               // 克拉尼节点线吸引力 (径向 + 切向)
-              const nodeForce = sin(dist * 0.1 - pulse.wavePhase) * strength;
-              fx += cos(angle + nodeForce) * strength;
-              fy += sin(angle + nodeForce) * strength;
+              const nodeForce = Math.sin(dist * 0.1 - pulse.wavePhase) * strength;
+              fx += Math.cos(angle + nodeForce) * strength;
+              fy += Math.sin(angle + nodeForce) * strength;
             }
           }
           
@@ -459,7 +459,7 @@
           particle.update();
           
           // 根据速度调整透明度
-          const speed = sqrt(particle.vx * particle.vx + particle.vy * particle.vy);
+          const speed = p.sqrt(particle.vx * particle.vx + particle.vy * particle.vy);
           const alpha = p.map(speed, 0, 3, 30, 150);
           
           p.stroke(200, 190, 180, alpha);
