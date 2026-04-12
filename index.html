@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>城市共振：时空噪声色谱</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; background: #0a0a0f; font-family: 'Noto Serif SC', serif; }
+    
+    #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+    #p5canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+    
+    /* UI Controls */
+    #controls {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      z-index: 100;
+    }
+    
+    #playBtn {
+      background: rgba(30, 30, 40, 0.9);
+      border: 1px solid rgba(200, 180, 160, 0.3);
+      color: #e8e0d8;
+      padding: 12px 32px;
+      font-size: 16px;
+      font-family: 'Noto Serif SC', serif;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.3s;
+    }
+    
+    #playBtn:hover {
+      background: rgba(50, 45, 40, 0.95);
+      border-color: rgba(200, 180, 160, 0.6);
+    }
+    
+    #timeline {
+      width: 400px;
+      height: 4px;
+      background: rgba(200, 180, 160, 0.2);
+      border-radius: 2px;
+      position: relative;
+    }
+    
+    #timelineProgress {
+      height: 100%;
+      background: linear-gradient(90deg, #4a6b8a, #8b6b5a);
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.1s linear;
+    }
+    
+    #timeDisplay {
+      color: rgba(200, 180, 160, 0.8);
+      font-size: 14px;
+      min-width: 160px;
+      text-align: center;
+    }
+    
+    #info {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: rgba(200, 180, 160, 0.7);
+      font-size: 13px;
+      line-height: 1.8;
+      z-index: 100;
+    }
+    
+    #legend {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(10, 10, 15, 0.85);
+      border: 1px solid rgba(200, 180, 160, 0.15);
+      padding: 15px;
+      border-radius: 4px;
+      z-index: 100;
+      display: none;
+    }
+    
+    #legend h4 {
+      color: rgba(200, 180, 160, 0.9);
+      font-size: 12px;
+      margin-bottom: 10px;
+      font-weight: normal;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 6px 0;
+      font-size: 11px;
+      color: rgba(200, 180, 160, 0.7);
+    }
+    
+    .legend-color {
+      width: 16px;
+      height: 4px;
+      border-radius: 2px;
+    }
+  </style>
+  
+  <!-- Mapbox GL JS -->
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.css" rel="stylesheet" />
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="map"></div>
+  <canvas id="p5canvas"></canvas>
+  
+  <div id="info">
+    <div>城市共振 · 时空噪声色谱</div>
+    <div style="font-size:11px;opacity:0.6;margin-top:4px;">Urban Resonance</div>
+  </div>
+  
+  <div id="controls">
+    <button id="playBtn">▶ 播放</button>
+    <div id="timeline"><div id="timelineProgress"></div></div>
+    <div id="timeDisplay">2022-01-01</div>
+  </div>
+  
+  <div id="legend">
+    <h4>噪声类型色谱</h4>
+    <div class="legend-item"><div class="legend-color" style="background:#2d5a5a"></div>基础施工</div>
+    <div class="legend-item"><div class="legend-color" style="background:#1a3a3a"></div>室内装修</div>
+    <div class="legend-item"><div class="legend-color" style="background:#3d4a4a"></div>拆除工程</div>
+    <div class="legend-item"><div class="legend-color" style="background:#0a0a0a"></div>工厂运行</div>
+    <div class="legend-item"><div class="legend-color" style="background:#1a1a1a"></div>非法排污</div>
+    <div class="legend-item"><div class="legend-color" style="background:#2a2a2a"></div>中央空调</div>
+    <div class="legend-item"><div class="legend-color" style="background:#5a5a6a"></div>车辆鸣笛</div>
+    <div class="legend-item"><div class="legend-color" style="background:#4a4a5a"></div>重型卡车</div>
+    <div class="legend-item"><div class="legend-color" style="background:#6a6a7a"></div>刹车尖鸣</div>
+    <div class="legend-item"><div class="legend-color" style="background:#8b3a3a"></div>广场舞</div>
+    <div class="legend-item"><div class="legend-color" style="background:#9b4a4a"></div>商业扩音</div>
+    <div class="legend-item"><div class="legend-color" style="background:#ab5a5a"></div>露天夜市</div>
+    <div class="legend-item"><div class="legend-color" style="background:#8b6b4a"></div>宠物犬吠</div>
+    <div class="legend-item"><div class="legend-color" style="background:#7b5b3a"></div>邻里纠纷</div>
+    <div class="legend-item"><div class="legend-color" style="background:#6b4b2a"></div>空调滴水</div>
+    <div class="legend-item"><div class="legend-color" style="background:#5a4a6a"></div>救护车</div>
+    <div class="legend-item"><div class="legend-color" style="background:#4a3a5a"></div>轨道交通</div>
+    <div class="legend-item"><div class="legend-color" style="background:#6a5a7a"></div>垃圾清运</div>
+  </div>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  <script>
+    // ==========================================
+    // 城市共振：时空噪声色谱
+    // Urban Resonance: Spatiotemporal Noise Chromatography
+    // ==========================================
+    
+    // ===== 配置 =====
+    const CONFIG = {
+      // Mapbox Token - 需要替换为你的token
+      mapboxToken: 'YOUR_MAPBOX_TOKEN_HERE',
+      // 中心点 - 武汉
+      center: [114.3055, 30.5928],
+      zoom: 11,
+      // 时间轴设置
+      startDate: new Date('2022-01-01'),
+      endDate: new Date('2024-12-31'),
+      playSpeed: 13, // 天数/秒 (约2分钟播完4年数据)
+    };
+    
+    // ===== 18类矿物色谱 =====
+    // 传统色 + 重墨质感
+    const MINERAL_COLORS = [
+      { name: '石青', r: 45, g: 90, b: 90, a: 200 },      // 0: 基础施工
+      { name: '石绿', r: 35, g: 85, b: 75, a: 180 },      // 1: 室内装修
+      { name: '石蓝', r: 55, g: 95, b: 105, a: 190 },     // 2: 拆除工程
+      { name: '焦墨', r: 10, g: 10, b: 10, a: 220 },      // 3: 工厂运行
+      { name: '煤黑', r: 18, g: 18, b: 18, a: 210 },     // 4: 非法排污
+      { name: '玄青', r: 30, g: 35, b: 40, a: 200 },     // 5: 中央空调/风机
+      { name: '铅灰', r: 90, g: 95, b: 105, a: 180 },    // 6: 车辆鸣笛
+      { name: '铁灰', r: 75, g: 78, b: 88, a: 185 },      // 7: 重型卡车
+      { name: '银灰', r: 110, g: 115, b: 120, a: 175 },   // 8: 刹车尖鸣
+      { name: '曙红', r: 139, g: 58, b: 58, a: 190 },     // 9: 广场舞
+      { name: '朱砂', r: 155, g: 74, b: 74, a: 185 },     // 10: 商业扩音
+      { name: '胭脂', r: 171, g: 90, b: 90, a: 180 },    // 11: 露天夜市
+      { name: '赭石', r: 139, g: 107, b: 74, a: 170 },    // 12: 宠物犬吠
+      { name: '茶色', r: 123, g: 91, b: 58, a: 165 },    // 13: 邻里纠纷
+      { name: '檀棕', r: 107, g: 75, b: 42, a: 160 },    // 14: 空调滴水
+      { name: '紫檀', r: 90, g: 74, b: 106, a: 175 },    // 15: 救护车/警笛
+      { name: '青紫', r: 74, g: 58, b: 90, a: 170 },      // 16: 轨道交通
+      { name: '藕荷', r: 106, g: 90, b: 122, a: 165 },   // 17: 垃圾清运
+    ];
+    
+    // ===== 穿透力参数 =====
+    const PENETRATION = {
+      baseRadius: [2000, 1500, 2000, 2500, 2200, 1800, 1200, 1800, 1000, 800, 700, 600, 500, 400, 300, 1500, 1200, 600],
+      lineWidth: [8, 6, 8, 12, 10, 8, 5, 7, 4, 4, 3, 3, 2, 2, 1.5, 6, 5, 3],
+    };
+    
+    // ===== 全局状态 =====
+    let map;
+    let noiseData = [];
+    let currentDate = new Date('2022-01-01');
+    let isPlaying = false;
+    let pulses = []; // 活跃的脉冲
+    let particles = []; // 克拉尼粒子
+    
+    // p5.js Canvas
+    let canvas;
+    
+    // ===== Step 1: Mapbox 初始化 =====
+    function initMap() {
+      mapboxgl.accessToken = CONFIG.mapboxToken;
+      
+      map = new mapboxgl.Map({
+        container: 'map',
+        style: {
+          version: 8,
+          sources: {
+            'carto-dark': {
+              type: 'raster',
+              tiles: [
+                'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+              ],
+              tileSize: 256,
+              attribution: '© CARTO © OpenStreetMap'
+            }
+          },
+          layers: [{
+            id: 'carto-dark-layer',
+            type: 'raster',
+            source: 'carto-dark',
+            minzoom: 0,
+            maxzoom: 20
+          }]
+        },
+        center: CONFIG.center,
+        zoom: CONFIG.zoom,
+        maxZoom: 16,
+        minZoom: 9,
+        attributionControl: false
+      });
+      
+      // 隐藏 attribution
+      map.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
+    }
+    
+    // ===== Step 1: 经纬度转像素坐标 =====
+    function lonLatToPixel(lon, lat) {
+      const point = map.project([lon, lat]);
+      return { x: point.x, y: point.y };
+    }
+    
+    // ===== Step 2: 脉冲物理模型 =====
+    class Pulse {
+      constructor(x, y, categoryId, weight, timestamp) {
+        this.x = x;
+        this.y = y;
+        this.categoryId = categoryId;
+        this.weight = weight;
+        this.timestamp = timestamp;
+        
+        const colorData = MINERAL_COLORS[categoryId];
+        this.baseColor = color(r => colorData.r, colorData.g, colorData.b, colorData.a);
+        
+        // 穿透半径
+        this.maxRadius = PENETRATION.baseRadius[categoryId] * (weight / 3);
+        // 线条宽度
+        this.lineWidth = PENETRATION.lineWidth[categoryId] * (weight / 3);
+        // 当前半径
+        this.radius = 0;
+        // 相位 (用于克拉尼图案)
+        this.phase = random(TWO_PI);
+        // 衰减相位
+        this.dampingPhase = 0;
+        // 活跃状态
+        this.active = true;
+        // 透明度衰减
+        this.opacity = 1.0;
+        
+        // 克拉尼波纹
+        this.waveCount = floor(random(4, 8));
+        this.wavePhase = random(1000);
+      }
+      
+      update() {
+        if (!this.active) return;
+        
+        // 指数衰减半径扩张
+        if (this.radius < this.maxRadius) {
+          this.radius += (this.maxRadius - this.radius) * 0.08;
+        }
+        
+        // 衰减相位 (余震效果)
+        this.dampingPhase += 0.15;
+        
+        // 透明度衰减
+        this.opacity = exp(-this.dampingPhase * 0.3);
+        
+        // 克拉尼波纹相位
+        this.wavePhase += 0.05;
+        
+        // 失活判断
+        if (this.opacity < 0.02) {
+          this.active = false;
+        }
+      }
+      
+      draw(p) {
+        if (!this.active || this.opacity < 0.01) return;
+        
+        const c = this.baseColor;
+        p.push();
+        p.translate(this.x, this.y);
+        
+        // 多层克拉尼波纹
+        for (let i = 0; i < this.waveCount; i++) {
+          const waveR = this.radius * (0.3 + i * 0.15);
+          const waveAmp = sin(this.wavePhase + this.wavePhase * 0.5 + i) * 15 * this.opacity;
+          
+          // 重墨质感 - 外发光
+          const glowAlpha = this.opacity * 80;
+          for (let g = 3; g > 0; g--) {
+            p.stroke(red(c), green(c), blue(c), glowAlpha / g);
+            p.strokeWeight(this.lineWidth * (1 + g * 0.5));
+            p.noFill();
+            this.drawChladniWave(p, waveR + waveAmp * (g * 0.3), i);
+          }
+          
+          // 主线条
+          p.stroke(red(c), green(c), blue(c), this.opacity * 200);
+          p.strokeWeight(this.lineWidth);
+          this.drawChladniWave(p, waveR + waveAmp, i);
+        }
+        
+        // 中心重墨点
+        const centerAlpha = this.opacity * 255;
+        p.fill(red(c), green(c), blue(c), centerAlpha);
+        p.noStroke();
+        p.ellipse(0, 0, this.lineWidth * 2, this.lineWidth * 2);
+        
+        p.pop();
+      }
+      
+      drawChladniWave(p, r, mode) {
+        p.beginShape();
+        for (let a = 0; a < TWO_PI; a += 0.1) {
+          // 克拉尼节点线 - 根据频率产生不同的波节
+          const displacement = sin(a * (mode + 2) * 2 + this.phase) * 
+                              cos(a * (mode + 1) + this.phase * 0.7);
+          const px = cos(a) * (r + displacement * 10);
+          const py = sin(a) * (r + displacement * 10);
+          p.vertex(px, py);
+        }
+        p.endShape(CLOSE);
+      }
+    }
+    
+    // ===== Step 3: 克拉尼粒子系统 =====
+    class ChladniParticle {
+      constructor() {
+        this.x = random(width);
+        this.y = random(height);
+        this.vx = 0;
+        this.vy = 0;
+        this.baseX = this.x;
+        this.baseY = this.y;
+      }
+      
+      applyForce(fx, fy, strength) {
+        this.vx += fx * strength;
+        this.vy += fy * strength;
+      }
+      
+      update() {
+        // 弹性回归
+        const dx = this.baseX - this.x;
+        const dy = this.baseY - this.y;
+        this.vx += dx * 0.02;
+        this.vy += dy * 0.02;
+        
+        // 阻尼
+        this.vx *= 0.92;
+        this.vy *= 0.92;
+        
+        this.x += this.vx;
+        this.y += this.vy;
+      }
+    }
+    
+    // ===== p5.js 主程序 =====
+    // 在 DOM 加载后初始化地图和画布
+    document.addEventListener('DOMContentLoaded', () => {
+      // 先初始化地图
+      initMap();
+      
+      // 再初始化 p5 画布
+      new p5((p) => {
+      p.setup = async function() {
+        const canvasElement = p.createCanvas(window.innerWidth, window.innerHeight);
+        canvasElement.parent('p5canvas');
+        canvasElement.id('defaultCanvas0');
+        
+        // 初始化粒子
+        for (let i = 0; i < 2000; i++) {
+          particles.push(new ChladniParticle());
+        }
+        
+        // 加载真实数据或演示数据
+        await loadRealData();
+        
+        // 显示图例
+        document.getElementById('legend').style.display = 'block';
+      };
+      
+      p.windowResized = function() {
+        p.resizeCanvas(window.innerWidth, window.innerHeight);
+        if (map) {
+          map.resize();
+        }
+      };
+      
+      p.draw = function() {
+        // 清空画布 (带渐隐效果)
+        p.background(0, 0, 0, 25);
+        
+        // 更新粒子位置 (施加脉冲力场)
+        for (let particle of particles) {
+          let fx = 0, fy = 0;
+          
+          for (let pulse of pulses) {
+            if (!pulse.active) continue;
+            
+            const dx = pulse.x - particle.x;
+            const dy = pulse.y - particle.y;
+            const dist = sqrt(dx * dx + dy * dy);
+            
+            if (dist < pulse.radius && dist > 10) {
+              // 指数衰减力场
+              const strength = exp(-dist / pulse.radius) * pulse.opacity * 0.5;
+              const angle = atan2(dy, dx);
+              
+              // 克拉尼节点线吸引力 (径向 + 切向)
+              const nodeForce = sin(dist * 0.1 - pulse.wavePhase) * strength;
+              fx += cos(angle + nodeForce) * strength;
+              fy += sin(angle + nodeForce) * strength;
+            }
+          }
+          
+          particle.applyForce(fx, fy, 1);
+        }
+        
+        // 更新和绘制脉冲
+        for (let i = pulses.length - 1; i >= 0; i--) {
+          pulses[i].update();
+          pulses[i].draw(p);
+          if (!pulses[i].active) {
+            pulses.splice(i, 1);
+          }
+        }
+        
+        // 绘制粒子 (克拉尼模式)
+        p.push();
+        for (let particle of particles) {
+          particle.update();
+          
+          // 根据速度调整透明度
+          const speed = sqrt(particle.vx * particle.vx + particle.vy * particle.vy);
+          const alpha = p.map(speed, 0, 3, 30, 150);
+          
+          p.stroke(200, 190, 180, alpha);
+          p.strokeWeight(0.5);
+          p.point(particle.x, particle.y);
+        }
+        p.pop();
+        
+        // 更新播放
+        if (isPlaying) {
+          updateTimeline();
+        }
+      };
+      
+    }, 'p5canvas');
+    }); // 结束 DOMContentLoaded
+    
+    // ===== 加载真实数据 =====
+    async function loadRealData() {
+      try {
+        const response = await fetch('noise_data.json');
+        if (!response.ok) throw new Error('Failed to load noise_data.json');
+        
+        const data = await response.json();
+        console.log(`📊 加载 ${data.length} 条真实数据`);
+        
+        // 转换为内部格式
+        noiseData = data.map(d => ({
+          lon: d.lon,
+          lat: d.lat,
+          categoryId: d.category_id,
+          timestamp: d.timestamp,
+          weight: d.weight,
+          triggered: false
+        }));
+        
+        // 更新配置的时间范围
+        if (noiseData.length > 0) {
+          CONFIG.startDate = new Date(noiseData[0].timestamp);
+          CONFIG.endDate = new Date(noiseData[noiseData.length - 1].timestamp);
+          currentDate = new Date(CONFIG.startDate);
+          document.getElementById('timeDisplay').textContent = formatDate(currentDate);
+          console.log(`📅 时间范围: ${formatDate(CONFIG.startDate)} 至 ${formatDate(CONFIG.endDate)}`);
+        }
+        
+        return true;
+      } catch (e) {
+        console.warn('⚠️ 无法加载 noise_data.json，使用演示数据:', e.message);
+        generateDemoData();
+        return false;
+      }
+    }
+    
+    // ===== 生成演示数据 (备用) =====
+    function generateDemoData() {
+      const startTime = CONFIG.startDate.getTime();
+      const endTime = CONFIG.endDate.getTime();
+      const range = endTime - startTime;
+      
+      for (let i = 0; i < 500; i++) {
+        const t = random(range) + startTime;
+        const date = new Date(t);
+        const lon = CONFIG.center[0] + random(-0.15, 0.15);
+        const lat = CONFIG.center[1] + random(-0.12, 0.12);
+        const categoryId = floor(random(18));
+        const hour = date.getHours();
+        let timeWeight = 1.0;
+        if (hour >= 22 || hour <= 5) {
+          timeWeight = 3.0;
+        } else if (hour >= 18 && hour < 22) {
+          timeWeight = 1.5 + (hour - 18) * 0.375;
+        }
+        const basePen = [5, 3, 5, 5, 5, 4, 4, 5, 4, 3, 3, 3, 2, 2, 2, 4, 4, 3][categoryId];
+        const weight = basePen * timeWeight;
+        
+        noiseData.push({
+          lon, lat, categoryId, timestamp: t, weight, triggered: false
+        });
+      }
+      
+      noiseData.sort((a, b) => a.timestamp - b.timestamp);
+    }
+    
+    // ===== 时间轴控制 =====
+    function updateTimeline() {
+      const dayMs = 24 * 60 * 60 * 1000;
+      currentDate = new Date(currentDate.getTime() + CONFIG.playSpeed * 1000);
+      
+      if (currentDate >= CONFIG.endDate) {
+        currentDate = CONFIG.endDate;
+        isPlaying = false;
+        document.getElementById('playBtn').textContent = '▶ 重播';
+      }
+      
+      // 更新显示
+      const progress = (currentDate - CONFIG.startDate) / (CONFIG.endDate - CONFIG.startDate);
+      document.getElementById('timelineProgress').style.width = (progress * 100) + '%';
+      document.getElementById('timeDisplay').textContent = formatDate(currentDate);
+      
+      // 触发当前时间的脉冲
+      triggerPulsesAtCurrentTime();
+    }
+    
+    // 数据指针 (优化大数据集遍历)
+    let dataPointer = 0;
+    
+    function triggerPulsesAtCurrentTime() {
+      const currentMs = currentDate.getTime();
+      const windowStart = currentMs - CONFIG.playSpeed * 1000 * 2;
+      
+      // 使用指针优化：从上次位置继续，避免 O(n) 遍历
+      while (dataPointer < noiseData.length && noiseData[dataPointer].timestamp <= currentMs) {
+        const data = noiseData[dataPointer];
+        
+        if (data.timestamp > windowStart && !data.triggered) {
+          data.triggered = true;
+          
+          // 转换为像素坐标
+          const pixel = lonLatToPixel(data.lon, data.lat);
+          
+          // 创建脉冲
+          const pulse = new Pulse(
+            pixel.x, 
+            pixel.y, 
+            data.categoryId, 
+            data.weight,
+            data.timestamp
+          );
+          pulses.push(pulse);
+        }
+        
+        dataPointer++;
+      }
+    }
+    
+    function formatDate(date) {
+      return date.getFullYear() + '-' + 
+             String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+             String(date.getDate()).padStart(2, '0');
+    }
+    
+    // ===== 播放控制 =====
+    document.getElementById('playBtn').addEventListener('click', () => {
+      if (currentDate >= CONFIG.endDate) {
+        // 重置
+        currentDate = new Date(CONFIG.startDate);
+        noiseData.forEach(d => d.triggered = false);
+        pulses = [];
+        dataPointer = 0;  // 重置数据指针
+      }
+      
+      isPlaying = !isPlaying;
+      document.getElementById('playBtn').textContent = isPlaying ? '⏸ 暂停' : '▶ 播放';
+    });
+    
+    // 地图移动时重新计算粒子位置
+    document.addEventListener('mapmove', () => {
+      // 可以在此重新投影所有活跃脉冲
+    });
+  </script>
+</body>
+</html>
