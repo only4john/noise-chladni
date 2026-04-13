@@ -24,37 +24,21 @@
       z-index: 1000;
     }
     
-    #playBtn {
+    #stepBtn, #autoBtn {
       background: rgba(30, 30, 40, 0.9);
       border: 1px solid rgba(200, 180, 160, 0.3);
       color: #e8e0d8;
-      padding: 12px 32px;
-      font-size: 16px;
+      padding: 10px 20px;
+      font-size: 14px;
       font-family: 'Noto Serif SC', serif;
       cursor: pointer;
       border-radius: 4px;
       transition: all 0.3s;
     }
     
-    #playBtn:hover {
+    #stepBtn:hover, #autoBtn:hover {
       background: rgba(50, 45, 40, 0.95);
       border-color: rgba(200, 180, 160, 0.6);
-    }
-    
-    #timeline {
-      width: 400px;
-      height: 4px;
-      background: rgba(200, 180, 160, 0.2);
-      border-radius: 2px;
-      position: relative;
-    }
-    
-    #timelineProgress {
-      height: 100%;
-      background: linear-gradient(90deg, #4a6b8a, #8b6b5a);
-      border-radius: 2px;
-      width: 0%;
-      transition: width 0.1s linear;
     }
     
     #timeDisplay {
@@ -126,9 +110,11 @@
   </div>
   
   <div id="controls">
-    <button id="playBtn">▶ Start</button>
-    <div id="timeline"><div id="timelineProgress"></div></div>
+    <button id="stepBtn">⏭ Next Day</button>
+    <button id="autoBtn">▶ Auto</button>
     <div id="timeDisplay">2022-01-01</div>
+    <div id="dayCounter" style="color:rgba(200,180,160,0.5);font-size:12px;margin-left:10px;">Day 0 / ~1492</div>
+    <div id="eventCount" style="color:rgba(200,180,160,0.4);font-size:11px;margin-left:10px;"></div>
   </div>
   
   <div id="legend">
@@ -168,7 +154,8 @@
       // 时间轴设置
       startDate: new Date('2022-01-01'),
       endDate: new Date('2024-12-31'),
-      playSpeed: 13, // 天数/秒 (约2分钟播完4年数据)
+      // 每天步进后自动播放间隔（毫秒）
+      autoPlayDelay: 800,
     };
     
     // ===== 18类矿物色谱 =====
@@ -204,7 +191,6 @@
     let map;
     let noiseData = [];
     let currentDate = new Date('2022-01-01');
-    let isPlaying = false;
     let pulses = []; // 活跃的脉冲
     let particles = []; // 克拉尼粒子
     
@@ -415,9 +401,7 @@
         }
       };
       
-      let _frameCount = 0;
       p.draw = function() {
-        _frameCount++;
         // 清空画布 (带渐隐拖尾效果)
         p.background(0, 0, 0, 40);
         
@@ -471,10 +455,7 @@
         }
         p.pop();
         
-        // 更新播放
-        if (isPlaying) {
-          updateTimeline();
-        }
+
       };
       
     }, 'p5canvas');
@@ -504,8 +485,10 @@
           CONFIG.startDate = new Date(noiseData[0].timestamp);
           CONFIG.endDate = new Date(noiseData[noiseData.length - 1].timestamp);
           currentDate = new Date(CONFIG.startDate);
+          totalDays = Math.ceil((CONFIG.endDate.getTime() - CONFIG.startDate.getTime()) / (24 * 60 * 60 * 1000));
           document.getElementById('timeDisplay').textContent = formatDate(currentDate);
-          console.log(`📅 时间范围: ${formatDate(CONFIG.startDate)} 至 ${formatDate(CONFIG.endDate)}`);
+          document.getElementById('dayCounter').textContent = 'Day 0 / ' + totalDays;
+          console.log('📅 时间范围: ' + formatDate(CONFIG.startDate) + ' 至 ' + formatDate(CONFIG.endDate) + ' (' + totalDays + ' days)');
         }
         
         return true;
@@ -546,56 +529,65 @@
       noiseData.sort((a, b) => a.timestamp - b.timestamp);
     }
     
-    // ===== 时间轴控制 =====
-    function updateTimeline() {
-      const dayMs = 24 * 60 * 60 * 1000;
-      currentDate = new Date(currentDate.getTime() + CONFIG.playSpeed * 1000);
-      
+    // ===== 步进一天 =====
+    let totalDays = 0;
+    let currentDayIndex = 0;
+    let autoPlayTimer = null;
+    
+    function getDayStart(date) {
+      const d = new Date(date);
+      d.setHours(0, 0, 0, 0);
+      return d.getTime();
+    }
+    
+    function getDayEnd(date) {
+      const d = new Date(date);
+      d.setHours(23, 59, 59, 999);
+      return d.getTime();
+    }
+    
+    function stepOneDay() {
       if (currentDate >= CONFIG.endDate) {
-        currentDate = CONFIG.endDate;
-        isPlaying = false;
-        document.getElementById('playBtn').textContent = '↺ Replay';
+        stopAutoPlay();
+        return;
+      }
+      
+      const dayStart = getDayStart(currentDate);
+      const dayEnd = getDayEnd(currentDate);
+      let dayEventCount = 0;
+      
+      // 找出当天的所有投诉，创建脉冲
+      for (const data of noiseData) {
+        if (data.timestamp >= dayStart && data.timestamp <= dayEnd) {
+          const pixel = lonLatToPixel(data.lon, data.lat);
+          pulses.push(new Pulse(pixel.x, pixel.y, data.categoryId, data.weight, data.timestamp));
+          dayEventCount++;
+        }
       }
       
       // 更新显示
-      const progress = (currentDate - CONFIG.startDate) / (CONFIG.endDate - CONFIG.startDate);
-      document.getElementById('timelineProgress').style.width = (progress * 100) + '%';
       document.getElementById('timeDisplay').textContent = formatDate(currentDate);
+      document.getElementById('dayCounter').textContent = 
+        'Day ' + (currentDayIndex + 1) + ' / ' + totalDays;
+      document.getElementById('eventCount').textContent = 
+        dayEventCount > 0 ? '+' + dayEventCount + ' events' : '';
       
-      // 触发当前时间的脉冲
-      triggerPulsesAtCurrentTime();
+      // 前进一天
+      currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
+      currentDayIndex++;
+      
+      if (currentDate >= CONFIG.endDate) {
+        stopAutoPlay();
+        document.getElementById('eventCount').textContent = 'End';
+      }
     }
     
-    // 数据指针 (优化大数据集遍历)
-    let dataPointer = 0;
-    
-    function triggerPulsesAtCurrentTime() {
-      const currentMs = currentDate.getTime();
-      const windowStart = currentMs - CONFIG.playSpeed * 1000 * 2;
-      
-      // 使用指针优化：从上次位置继续，避免 O(n) 遍历
-      while (dataPointer < noiseData.length && noiseData[dataPointer].timestamp <= currentMs) {
-        const data = noiseData[dataPointer];
-        
-        if (data.timestamp > windowStart && !data.triggered) {
-          data.triggered = true;
-          
-          // 转换为像素坐标
-          const pixel = lonLatToPixel(data.lon, data.lat);
-          
-          // 创建脉冲
-          const pulse = new Pulse(
-            pixel.x, 
-            pixel.y, 
-            data.categoryId, 
-            data.weight,
-            data.timestamp
-          );
-          pulses.push(pulse);
-        }
-        
-        dataPointer++;
+    function stopAutoPlay() {
+      if (autoPlayTimer) {
+        clearInterval(autoPlayTimer);
+        autoPlayTimer = null;
       }
+      document.getElementById('autoBtn').textContent = '▶ Auto';
     }
     
     function formatDate(date) {
@@ -604,23 +596,19 @@
              String(date.getDate()).padStart(2, '0');
     }
     
-    // ===== 播放控制 =====
-    document.getElementById('playBtn').addEventListener('click', () => {
-      if (currentDate >= CONFIG.endDate) {
-        // 重置
-        currentDate = new Date(CONFIG.startDate);
-        noiseData.forEach(d => d.triggered = false);
-        pulses = [];
-        dataPointer = 0;  // 重置数据指针
-      }
-      
-      isPlaying = !isPlaying;
-      document.getElementById('playBtn').textContent = isPlaying ? '⏸ Pause' : '▶ Resume';
+    // ===== 按钮事件 =====
+    document.getElementById('stepBtn').addEventListener('click', () => {
+      stopAutoPlay();
+      stepOneDay();
     });
     
-    // 地图移动时重新计算粒子位置
-    document.addEventListener('mapmove', () => {
-      // 可以在此重新投影所有活跃脉冲
+    document.getElementById('autoBtn').addEventListener('click', () => {
+      if (autoPlayTimer) {
+        stopAutoPlay();
+      } else {
+        autoPlayTimer = setInterval(stepOneDay, CONFIG.autoPlayDelay);
+        document.getElementById('autoBtn').textContent = '⏸ Pause';
+      }
     });
   </script>
 </body>
