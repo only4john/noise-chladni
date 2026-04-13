@@ -433,7 +433,7 @@
             if (dist < pulse.radius && dist > 10) {
               // 指数衰减力场
               const strength = Math.exp(-dist / pulse.radius) * pulse.opacity * 0.5;
-              const angle = atan2(dy, dx);
+              const angle = p.atan2(dy, dx);
               
               // 克拉尼节点线吸引力 (径向 + 切向)
               const nodeForce = Math.sin(dist * 0.1 - pulse.wavePhase) * strength;
