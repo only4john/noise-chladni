@@ -125,7 +125,7 @@
   </div>
   
   <div id="controls">
-    <button id="playBtn">▶ 播放</button>
+    <button id="playBtn">▶ Start</button>
     <div id="timeline"><div id="timelineProgress"></div></div>
     <div id="timeDisplay">2022-01-01</div>
   </div>
@@ -338,7 +338,7 @@
       
       drawChladniWave(p, r, mode) {
         p.beginShape();
-        for (let a = 0; a < TWO_PI; a += 0.1) {
+        for (let a = 0; a < Math.PI * 2; a += 0.1) {
           // 克拉尼节点线 - 根据频率产生不同的波节
           const displacement = Math.sin(a * (mode + 2) * 2 + this.phase) * 
                               cos(a * (mode + 1) + this.phase * 0.7);
@@ -346,7 +346,7 @@
           const py = Math.sin(a) * (r + displacement * 10);
           p.vertex(px, py);
         }
-        p.endShape(CLOSE);
+        p.endShape(true);
       }
     }
     
@@ -551,7 +551,7 @@
       if (currentDate >= CONFIG.endDate) {
         currentDate = CONFIG.endDate;
         isPlaying = false;
-        document.getElementById('playBtn').textContent = '▶ 重播';
+        document.getElementById('playBtn').textContent = '↺ Replay';
       }
       
       // 更新显示
@@ -612,7 +612,7 @@
       }
       
       isPlaying = !isPlaying;
-      document.getElementById('playBtn').textContent = isPlaying ? '⏸ 暂停' : '▶ 播放';
+      document.getElementById('playBtn').textContent = isPlaying ? '⏸ Pause' : '▶ Resume';
     });
     
     // 地图移动时重新计算粒子位置
