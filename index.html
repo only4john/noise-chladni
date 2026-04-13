@@ -255,7 +255,7 @@
         this.timestamp = timestamp;
         
         const colorData = MINERAL_COLORS[categoryId];
-        this.baseColor = color(r => colorData.r, colorData.g, colorData.b, colorData.a);
+        this.baseColor = { r: colorData.r, g: colorData.g, b: colorData.b, a: colorData.a };
         
         // 穿透半径
         this.maxRadius = PENETRATION.baseRadius[categoryId] * (weight / 3);
@@ -315,21 +315,21 @@
           // 重墨质感 - 外发光
           const glowAlpha = this.opacity * 80;
           for (let g = 3; g > 0; g--) {
-            p.stroke(red(c), green(c), blue(c), glowAlpha / g);
+            p.stroke(c.r, c.g, c.b, glowAlpha / g);
             p.strokeWeight(this.lineWidth * (1 + g * 0.5));
             p.noFill();
             this.drawChladniWave(p, waveR + waveAmp * (g * 0.3), i);
           }
           
           // 主线条
-          p.stroke(red(c), green(c), blue(c), this.opacity * 200);
+          p.stroke(c.r, c.g, c.b, this.opacity * 200);
           p.strokeWeight(this.lineWidth);
           this.drawChladniWave(p, waveR + waveAmp, i);
         }
         
         // 中心重墨点
         const centerAlpha = this.opacity * 255;
-        p.fill(red(c), green(c), blue(c), centerAlpha);
+        p.fill(c.r, c.g, c.b, centerAlpha);
         p.noStroke();
         p.ellipse(0, 0, this.lineWidth * 2, this.lineWidth * 2);
         
