@@ -415,7 +415,12 @@
         }
       };
       
+      let _frameCount = 0;
       p.draw = function() {
+        _frameCount++;
+        if (_frameCount === 1) {
+          console.log('[DEBUG] draw() running, canvas:', p.width, 'x', p.height, 'particles:', particles.length, 'pulses:', pulses.length);
+        }
         // 清空画布 (带渐隐效果)
         p.background(0, 0, 0, 25);
         
@@ -472,6 +477,9 @@
         // 更新播放
         if (isPlaying) {
           updateTimeline();
+          if (_frameCount % 60 === 0) {
+            console.log('[DEBUG] playing, pulses:', pulses.length, 'date:', currentDate.toISOString());
+          }
         }
       };
       
@@ -604,6 +612,7 @@
     
     // ===== 播放控制 =====
     document.getElementById('playBtn').addEventListener('click', () => {
+      console.log('[DEBUG] playBtn clicked, isPlaying was:', isPlaying);
       if (currentDate >= CONFIG.endDate) {
         // 重置
         currentDate = new Date(CONFIG.startDate);
