@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>城市共振：时空噪声色谱</title>
+  <title>Urban Resonance: Spatiotemporal Noise Chromatography</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌊</text></svg>">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { overflow: hidden; background: #0a0a0f; font-family: 'Noto Serif SC', serif; }
@@ -120,8 +121,8 @@
   <canvas id="p5canvas"></canvas>
   
   <div id="info">
-    <div>城市共振 · 时空噪声色谱</div>
-    <div style="font-size:11px;opacity:0.6;margin-top:4px;">Urban Resonance</div>
+    <div>Urban Resonance · Noise Chromatography</div>
+    <div style="font-size:11px;opacity:0.6;margin-top:4px;">Chladni Wave Visualization</div>
   </div>
   
   <div id="controls">
@@ -131,7 +132,7 @@
   </div>
   
   <div id="legend">
-    <h4>噪声类型色谱</h4>
+    <h4>Noise Type Palette</h4>
     <div class="legend-item"><div class="legend-color" style="background:#2d5a5a"></div>基础施工</div>
     <div class="legend-item"><div class="legend-color" style="background:#1a3a3a"></div>室内装修</div>
     <div class="legend-item"><div class="legend-color" style="background:#3d4a4a"></div>拆除工程</div>
@@ -341,7 +342,7 @@
         for (let a = 0; a < Math.PI * 2; a += 0.1) {
           // 克拉尼节点线 - 根据频率产生不同的波节
           const displacement = Math.sin(a * (mode + 2) * 2 + this.phase) * 
-                              cos(a * (mode + 1) + this.phase * 0.7);
+                              Math.cos(a * (mode + 1) + this.phase * 0.7);
           const px = Math.cos(a) * (r + displacement * 10);
           const py = Math.sin(a) * (r + displacement * 10);
           p.vertex(px, py);
