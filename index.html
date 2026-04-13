@@ -8,8 +8,8 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { overflow: hidden; background: #0a0a0f; font-family: 'Noto Serif SC', serif; }
     
-    #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-    #p5canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+    #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+    #p5canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
     
     /* UI Controls */
     #controls {
@@ -20,7 +20,7 @@
       display: flex;
       align-items: center;
       gap: 20px;
-      z-index: 100;
+      z-index: 1000;
     }
     
     #playBtn {
@@ -70,7 +70,7 @@
       color: rgba(200, 180, 160, 0.7);
       font-size: 13px;
       line-height: 1.8;
-      z-index: 100;
+      z-index: 1000;
     }
     
     #legend {
@@ -81,7 +81,7 @@
       border: 1px solid rgba(200, 180, 160, 0.15);
       padding: 15px;
       border-radius: 4px;
-      z-index: 100;
+      z-index: 1000;
       display: none;
     }
     
