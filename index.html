@@ -281,19 +281,19 @@
       update() {
         if (!this.active) return;
         
-        // 指数衰减半径扩张
+        // 指数衰减半径扩张（更慢，让波纹有更多时间展开）
         if (this.radius < this.maxRadius) {
-          this.radius += (this.maxRadius - this.radius) * 0.08;
+          this.radius += (this.maxRadius - this.radius) * 0.04;
         }
         
         // 衰减相位 (余震效果)
-        this.dampingPhase += 0.15;
+        this.dampingPhase += 0.04;
         
-        // 透明度衰减
-        this.opacity = Math.exp(-this.dampingPhase * 0.3);
+        // 透明度衰减（更慢更持久）
+        this.opacity = Math.exp(-this.dampingPhase * 0.25);
         
-        // 克拉尼波纹相位
-        this.wavePhase += 0.05;
+        // 克拉尼波纹相位（慢一点，图案更清晰）
+        this.wavePhase += 0.02;
         
         // 失活判断
         if (this.opacity < 0.02) {
@@ -418,11 +418,8 @@
       let _frameCount = 0;
       p.draw = function() {
         _frameCount++;
-        if (_frameCount === 1) {
-          console.log('[DEBUG] draw() running, canvas:', p.width, 'x', p.height, 'particles:', particles.length, 'pulses:', pulses.length);
-        }
-        // 清空画布 (带渐隐效果)
-        p.background(0, 0, 0, 25);
+        // 清空画布 (带渐隐拖尾效果)
+        p.background(0, 0, 0, 40);
         
         // 更新粒子位置 (施加脉冲力场)
         for (let particle of particles) {
@@ -464,9 +461,9 @@
         for (let particle of particles) {
           particle.update();
           
-          // 根据速度调整透明度
+          // 根据速度调整透明度（最低亮度提高，更清晰可见）
           const speed = p.sqrt(particle.vx * particle.vx + particle.vy * particle.vy);
-          const alpha = p.map(speed, 0, 3, 30, 150);
+          const alpha = p.map(speed, 0, 3, 80, 200);
           
           p.stroke(200, 190, 180, alpha);
           p.strokeWeight(0.5);
@@ -477,9 +474,6 @@
         // 更新播放
         if (isPlaying) {
           updateTimeline();
-          if (_frameCount % 60 === 0) {
-            console.log('[DEBUG] playing, pulses:', pulses.length, 'date:', currentDate.toISOString());
-          }
         }
       };
       
@@ -612,7 +606,6 @@
     
     // ===== 播放控制 =====
     document.getElementById('playBtn').addEventListener('click', () => {
-      console.log('[DEBUG] playBtn clicked, isPlaying was:', isPlaying);
       if (currentDate >= CONFIG.endDate) {
         // 重置
         currentDate = new Date(CONFIG.startDate);
